@@ -2,8 +2,8 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch: # Permite que você clique em um botão para gerar o APK quando quiser
+    branches: [ principal, main ]
+  workflow_dispatch: 
 
 jobs:
   build:
@@ -14,15 +14,15 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Set up Node.js
-      uses:   actions/setup-node@v4
+      uses: actions/setup-node@v4
       with:
         node-version: 20
 
     - name: Set up JDK 21
-  uses: actions/setup-java@v4
-  with:
-    distribution: 'temurin'
-    java-version: '21'
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
 
     - name: Install Project Dependencies
       run: |
