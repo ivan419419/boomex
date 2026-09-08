@@ -1,90 +1,80 @@
-// ==================== BOMB.JS ====================
-// Sistema de bombas - Bomberman clássico
+// ==================== BOMB.JS — CORRIGIDO ====================
+export class Bomb {
+    constructor(x, y, col, row) {
+        this.x = x;
+        this.y = y;
+        this.col = col;
+        this.row = row;
+        this.timer = 2500;
+        this.isExploded = false;
+        this.explosionTimer = 500;
+        this.radius = 2;
+        this.affectedTiles = [];
+        this.tileSize = 32;
+    }
 
-const bombs = [];
-
-// ==================== CRIAR BOMBA ====================
-function createBomb(x, y) {
-    bombs.push({
-        x: Math.floor(x / 32) * 32 + 16,   // centralizado no tile
-        y: Math.floor(y / 32) * 32 + 16,
-        timer: 2500,                       // 2.5 segundos
-        radius: 1.5
-    });
-}
-
-// ==================== ATUALIZAR BOMBAS ====================
-function updateBombs() {
-    for (let i = bombs.length - 1; i >= 0; i--) {
-        const bomb = bombs[i];
-        bomb.timer -= 16; // frame de 60fps
-        
-        // Tempo acabou = explode
-        if (bomb.timer <= 0) {
-            explodeBomb(i);
-            bombs.splice(i, 1);
+    update(deltaTime, map, enemies) {
+        if (!this.isExploded) {
+            this.timer -= deltaTime;
+            if (this.timer <= 0) {
+                this.isExploded = true;
+                this.explode(map, enemies);
+            }
+        } else {
+            this.explosionTimer -= deltaTime;
         }
     }
-}
 
-// ==================== EXPLOSÃO ====================
-function explodeBomb(index) {
-    const bomb = bombs[index];
-    const radius = bomb.radius * 32;
-    
-    // Pinta a explosão na tela
-    ctx.fillStyle = "rgba(255, 165, 0, 0.9)";
-    ctx.beginPath();
-    ctx.arc(bomb.x, bomb.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Centro da explosão
-    ctx.fillStyle = "#ff0000";
-    ctx.beginPath();
-    ctx.arc(bomb.x, bomb.y, 12, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Círculos de onda (efeito clássico)
-    for (let i = 1; i <= 3; i++) {
-        ctx.strokeStyle = "rgba(255, 200, 50, 0.6)";
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.arc(bomb.x, bomb.y, radius * (i / 3), 0, Math.PI * 2);
-        ctx.stroke();
-    }
-    
-    // ==================== COLISÃO ====================
-    // Destrói paredes em um raio
-    const startX = Math.floor((bomb.x - radius) / 32);
-    const startY = Math.floor((bomb.y - radius) / 32);
-    const endX = Math.floor((bomb.x + radius) / 32);
-    const endY = Math.floor((bomb.y + radius) / 32);
-    
-    for (let y = startY; y <= endY; y++) {
-        for (let x = startX; x <= endX; x++) {
-            if (x >= 0 && x < columns && y >= 0 && y < rows) {
-                // Destrói parede (1 -> 0)
-                if (map[y][x] === 1) {
-                    map[y][x] = 0;
+    explode(map, enemies) {
+        this.affectedTiles.push({ row: this.row, col: this.col });
+        const directions = [[-1,0],[1,0],[0,-1],[0,1]];
+
+        directions.forEach(([dRow, dCol]) => {
+            for (let i = 1; i <= this.radius; i++) {
+                const tr = this.row + (dRow * i);
+                const tc = this.col + (dCol * i);
+                if (tr < 0 || tr >= map.length || tc < 0 || tc >= map[0].length) break;
+                if (map[tr][tc] === 1) break;
+                if (map[tr][tc] === 2) {
+                    map[tr][tc] = 0;
+                    this.affectedTiles.push({ row: tr, col: tc });
+                    break;
                 }
-                
-                // Destrói jogador se estiver no raio
-                const dx = player.x - bomb.x;
-                const dy = player.y - bomb.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                
-                if (dist < radius && dist > 5) {
-                    console.log("💥 JOGADOR MORREU!");
-                    // Aqui você pode adicionar tela de game over depois
+                if (map[tr][tc] === 0) {
+                    this.affectedTiles.push({ row: tr, col: tc });
                 }
             }
+        });
+
+        // Eliminar inimigos na explosão
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const e = enemies[i];
+            const eCol = Math.floor(e.x / this.tileSize);
+            const eRow = Math.floor(e.y / this.tileSize);
+            const hit = this.affectedTiles.some(t => t.row === eRow && t.col === eCol);
+            if (hit) enemies.splice(i, 1);
+        }
+    }
+
+    draw(ctx, tileSize) {
+        if (!this.isExploded) {
+            const cx = this.col * tileSize + tileSize/2;
+            const cy = this.row * tileSize + tileSize/2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, tileSize/3, 0, Math.PI*2);
+            ctx.fillStyle = "#3d3d5c";
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - tileSize/3);
+            ctx.lineTo(cx + 4, cy - tileSize/2);
+            ctx.strokeStyle = Math.random()>0.5 ? "#ff4757" : "#ffa502";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = "#ffa502";
+            this.affectedTiles.forEach(t => {
+                ctx.fillRect(t.col*tileSize+2, t.row*tileSize+2, tileSize-4, tileSize-4);
+            });
         }
     }
 }
-
-// ==================== FUNÇÃO PRINCIPAL ====================
-function updateBombs() {
-    updateBombs();
-}
-
-export { createBomb, updateBombs };

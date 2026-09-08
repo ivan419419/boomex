@@ -1,42 +1,44 @@
-// ==================== PLAYER.JS - BOMBERMAN SPRITE SHEET ====================
-// Usa sprite sheet (Idle + Walk + Bomb)
+// ==================== PLAYER.JS — CORRIGIDO ====================
+import { canvas, ctx } from './canvas.js';
 
 const player = {
-    x: 200,
-    y: 200,
+    x: 2 * 32 + 16,
+    y: 2 * 32 + 16,
     speed: 4.5,
     size: 32,
-    direction: 0,           // 0 = parado, 1 = direita, 2 = esquerda, 3 = cima, 4 = baixo
+    lives: 3,
+    isDead: false,
+    direction: 0,
     frame: 0,
     isMoving: false,
-    isHoldingBomb: false
+    isHoldingBomb: false,
+    startX: 0,
+    startY: 0
 };
 
-let sprites = {
-    idle: null,
-    walk: null,
-    bomb: null
-};
+let sprites = { idle: null, walk: null, bomb: null };
 
-// ==================== CARREGAR SPRITES ====================
+// ✅ CAMINHO CORRIGIDO — assets/images/ (igual sua estrutura!)
 function loadSprites() {
     sprites.idle = new Image();
-    sprites.idle.src = "assets-raw/sprites/bomberman_idle.png";
-    
-    sprites.walk = new Image();
-    sprites.walk.src = "assets-raw/sprites/bomberman_walk.png";
-    
-    sprites.bomb = new Image();
-    sprites.bomb.src = "assets-raw/sprites/bomberman_bomb.png";
-}
+    sprites.idle.src = "assets/images/bomberman_walk.png"; // ← usar existente
+    sprites.idle.onload = () => console.log("✅ Idle carregado!");
+    sprites.idle.onerror = () => console.error("❌ Idle falhou!");
 
-// ==================== CONTROLES POR TOQUE ====================
-canvas.addEventListener('touchstart', handleTouchStart);
-canvas.addEventListener('touchmove', handleTouchMove);
-canvas.addEventListener('touchend', handleTouchEnd);
+    sprites.walk = new Image();
+    sprites.walk.src = "assets/images/bomberman_walk.png";
+    sprites.walk.onload = () => console.log("✅ Walk carregado!");
+    sprites.walk.onerror = () => console.error("❌ Walk falhou!");
+
+    sprites.bomb = new Image();
+    sprites.bomb.src = "assets/images/bomb.png";
+    sprites.bomb.onload = () => console.log("✅ Bomb carregado!");
+    sprites.bomb.onerror = () => console.error("❌ Bomb falhou!");
+}
 
 function handleTouchStart(e) {
     e.preventDefault();
+    if (player.isDead) return;
     const touch = e.touches[0];
     player.startX = touch.clientX;
     player.startY = touch.clientY;
@@ -45,82 +47,76 @@ function handleTouchStart(e) {
 }
 
 function handleTouchMove(e) {
-    if (!player.isMoving) return;
+    if (!player.isMoving || player.isDead) return;
     e.preventDefault();
-    
     const touch = e.touches[0];
     const deltaX = touch.clientX - player.startX;
     const deltaY = touch.clientY - player.startY;
-    
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
-    
-    if (absX > absY) {
-        player.direction = deltaX > 0 ? 1 : 2;
-    } else {
-        player.direction = deltaY > 0 ? 4 : 3;
-    }
-    
+    player.direction = absX > absY ? (deltaX > 0 ? 1 : 2) : (deltaY > 0 ? 4 : 3);
     updatePlayerPosition();
 }
 
 function handleTouchEnd(e) {
+    if (player.isDead) return;
     player.isMoving = false;
     player.direction = 0;
-    if (Math.abs(e.changedTouches[0].clientX - player.x) < 30 && 
-        Math.abs(e.changedTouches[0].clientY - player.y) < 30) {
-        player.isHoldingBomb = true;
-    }
 }
 
-// ==================== MOVIMENTO ====================
 function updatePlayerPosition() {
+    if (player.isDead) return;
     switch(player.direction) {
-        case 1: player.x += player.speed; break;   // direita
-        case 2: player.x -= player.speed; break;   // esquerda
-        case 3: player.y -= player.speed; break;   // cima
-        case 4: player.y += player.speed; break;   // baixo
+        case 1: player.x += player.speed; break;
+        case 2: player.x -= player.speed; break;
+        case 3: player.y -= player.speed; break;
+        case 4: player.y += player.speed; break;
     }
-    
-    // Limites da tela
-    const minX = 16;
-    const maxX = canvas.width - 16;
-    const minY = 16;
-    const maxY = canvas.height - 16;
-    
-    player.x = Math.max(minX, Math.min(maxX, player.x));
-    player.y = Math.max(minY, Math.min(maxY, player.y));
+    player.x = Math.max(32, Math.min(canvas.width - 32, player.x));
+    player.y = Math.max(32, Math.min(canvas.height - 32, player.y));
 }
 
-// ==================== DESENHO ====================
 function drawPlayer() {
+    if (player.isDead) return;
     let sprite = sprites.idle;
-    const animationSpeed = player.isMoving ? 6 : 0;
-    
-    if (player.isHoldingBomb) {
-        sprite = sprites.bomb;
-    } else if (player.isMoving) {
+    if (player.isMoving) {
         sprite = sprites.walk;
-        player.frame = (player.frame + animationSpeed) % 8;
+        player.frame = (player.frame + 0.15) % 4;
     }
-    
-    const sx = player.frame * 64;   // animação de andar
-    
-    ctx.drawImage(sprite, sx, 0, 64, 64, player.x - 32, player.y - 32, 64, 64);
+    if (sprite && sprite.complete) {
+        const sx = Math.floor(player.frame) * 32;
+        ctx.drawImage(sprite, sx, 0, 32, 32, player.x - 16, player.y - 16, 32, 32);
+    } else {
+        ctx.fillStyle = "#c8102e";
+        ctx.fillRect(player.x - 12, player.y - 16, 24, 32);
+    }
 }
 
-// ==================== UPDATE PRINCIPAL ====================
 function updatePlayer() {
-    if (player.isMoving) {
-        updatePlayerPosition();
-    }
+    if (player.isMoving) updatePlayerPosition();
     drawPlayer();
 }
 
-// ==================== INICIALIZAÇÃO ====================
+export function takeDamage() {
+    if (player.isDead) return;
+    player.lives--;
+    if (player.lives <= 0) {
+        player.isDead = true;
+        alert("💥 GAME OVER! Tente novamente!");
+        setTimeout(() => window.location.reload(), 1500);
+    } else {
+        player.x = 2 * 32 + 16;
+        player.y = 2 * 32 + 16;
+        player.direction = 0;
+        player.isMoving = false;
+    }
+}
+
 function initPlayer() {
     loadSprites();
-    updatePlayer();
+    canvas.addEventListener('touchstart', handleTouchStart);
+    canvas.addEventListener('touchmove', handleTouchMove);
+    canvas.addEventListener('touchend', handleTouchEnd);
 }
 
 export { player, updatePlayer, initPlayer };

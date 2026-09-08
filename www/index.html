@@ -1,16 +1,25 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BOOMEX</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div id="game-container"></div>
 
-    <script src="js/player.js"></script>
-    <script src="js/bomb.js"></script>
-    <script src="js/main.js"></script>
+    <!-- CANVAS AQUI -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Deixe apenas esta linha para iniciar o jogo -->
+<!-- Substitua as linhas 15-16 por: -->
+<script type="module" src="js/canvas.js"></script>
+<script type="module" src="js/bomb.js"></script>
+<script type="module" src="js/enemy.js"></script>
+<script type="module" src="js/player.js"></script>
+<script type="module" src="js/main.js"></script>
+
+
 </body>
 </html>
