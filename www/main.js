@@ -1,5 +1,5 @@
-import { player, updatePlayer, initPlayer, takeDamage } from './player.js';
-import { updateBombs, drawBombs, drawExplosions, placeBomb } from './bomb.js';
+import { player, updatePlayer, initPlayer, takeDamage, resetPlayer } from './player.js';
+import { updateBombs, drawBombs, drawExplosions, placeBomb, resetBombs } from './bomb.js';
 import { Enemy } from './enemy.js';
 
 const canvas = document.getElementById('gameCanvas');
@@ -29,6 +29,7 @@ export const map = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
+const initialMap = map.map(row => [...row]);
 const enemies = [
   new Enemy(11 * tileSize + 16, 1 * tileSize + 16, tileSize),
   new Enemy(1 * tileSize + 16, 11 * tileSize + 16, tileSize),
@@ -46,18 +47,21 @@ function dropBomb() {
 }
 
 canvas.addEventListener('click', () => {
-  dropBomb();
+  if (finished) restartGame();
+  else dropBomb();
 });
 
 document.getElementById('bombButton')?.addEventListener('click', (event) => {
   event.preventDefault();
-  dropBomb();
+  if (finished) restartGame();
+  else dropBomb();
 });
 
 window.addEventListener('keydown', (event) => {
   if (event.code === 'Space') {
     event.preventDefault();
-    dropBomb();
+    if (finished) restartGame();
+    else if (!event.repeat) dropBomb();
   }
 });
 
@@ -170,7 +174,7 @@ function showEndScreen(title, color, subtitle) {
 }
 
 function gameLoop(timestamp) {
-  const deltaTime = timestamp - lastTime || 0;
+  const deltaTime = lastTime ? Math.min(timestamp - lastTime, 50) : 16.667;
   lastTime = timestamp;
   bombCooldown = Math.max(0, bombCooldown - deltaTime);
 
@@ -183,12 +187,12 @@ function gameLoop(timestamp) {
   drawExplosions(ctx, tileSize);
 
   for (const enemy of enemies) {
-    enemy.update(map, columns, rows);
+    enemy.update(map, columns, rows, deltaTime);
     enemy.draw(ctx);
   }
 
   checkPlayerEnemyCollision();
-  updatePlayer();
+  updatePlayer(deltaTime);
 
   if (enemies.length === 0) {
     showEndScreen('SETOR LIMPO', '#48f5dc', 'Toque para jogar novamente');
@@ -197,6 +201,17 @@ function gameLoop(timestamp) {
   }
 
   if (!finished) requestAnimationFrame(gameLoop);
+}
+
+function restartGame() {
+  if (!finished) return;
+  for (let row=0; row<rows; row++) map[row].splice(0, columns, ...initialMap[row]);
+  enemies.splice(0, enemies.length,
+    new Enemy(11 * tileSize + 16, 1 * tileSize + 16, tileSize),
+    new Enemy(1 * tileSize + 16, 11 * tileSize + 16, tileSize),
+    new Enemy(11 * tileSize + 16, 11 * tileSize + 16, tileSize));
+  resetPlayer(); resetBombs(); bombCooldown=0; lastTime=0; finished=false;
+  requestAnimationFrame(gameLoop);
 }
 
 function init() {
